@@ -37,3 +37,25 @@ This project is a **Prescription Follow-up System** that allows doctors to add p
 
 ## Project Structure
 
+prescription_followup/
+│
+├─ main.py # Main script to add prescriptions
+├─ add_prescription.py # Script to add patient prescriptions
+├─ send_followups.py # Script to send AI follow-up emails
+├─ database.py # SQLAlchemy database setup
+├─ email_utils.py # Email sending utilities
+├─ ai_agent.py # AI email generator using Google Gemini
+├─ .env # Environment variables (API keys, email credentials)
+├─ requirements.txt # Python dependencies
+└─ README.md # Project documentation
+
+
+---
+
+## Setup Instructions
+
+### 1. Clone the repository
+```bash
+git clone [<repository_url>](https://github.com/AyushiSoni2003/prescription_followup.git)
+cd prescription_followup
+
