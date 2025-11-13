@@ -4,6 +4,7 @@ from email_utils import send_followup_email
 from datetime import datetime ,UTC
 from ai_agent import generate_followup_email
 import threading
+from twilio_utils import make_followup_call
 
 def schedule_followup(prescription_id, delay):
     """Wait for 'delay' seconds then send follow-up email."""
@@ -25,6 +26,12 @@ def schedule_followup(prescription_id, delay):
         print(f"Follow-up sent for patient: {prescription.patient_name}")
     db.close()
 
+def schedule_followup_call(patient_phone,patient_name, delay, disease, medicine, days):
+    # Wait for 'delay' seconds then make follow-up call
+    time.sleep(delay)
+    make_followup_call(patient_phone,patient_name,disease,medicine,days)
+
+
 def add_prescription():
     db = SessionLocal()
 
@@ -33,6 +40,7 @@ def add_prescription():
     disease = input("Enter diagnosed disease: ")
     prescription_text = input("Enter prescribed medicine(s): ")
     days = int(input("Enter duration (in days): "))
+    patient_phone = input("Enter patient phone number (with country code): ")
 
     new_prescription = Prescription(
         patient_name=patient_name,
@@ -41,6 +49,7 @@ def add_prescription():
         prescription=prescription_text,
         days=days,
         created_at=datetime.now(UTC),
+        patient_phone=patient_phone
     )
 
     db.add(new_prescription)
@@ -50,7 +59,17 @@ def add_prescription():
 
     # Schedule follow-up (5 sec for testing)
     threading.Thread(target=schedule_followup, args=(new_prescription.id, 3)).start()
-
+    threading.Thread(
+    target=schedule_followup_call,
+    args=(
+        new_prescription.patient_phone,
+        new_prescription.patient_name,
+        3,  # delay in seconds
+        new_prescription.disease,
+        new_prescription.prescription,
+        new_prescription.days
+    )
+).start()
     db.close()
 
 

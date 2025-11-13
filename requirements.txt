@@ -2,3 +2,6 @@ google-genai
 python-dotenv
 sqlalchemy
 psycopg2-binary
+twilio
+elevenlabs
+googletrans==4.0.0-rc1

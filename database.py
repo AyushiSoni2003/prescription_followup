@@ -26,6 +26,7 @@ class Prescription(Base):
     days = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     followup_sent = Column(Boolean, default=False)
+    patient_phone = Column(String(20), nullable=False)
 
 # Create tables
 def init_db():
