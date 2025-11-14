@@ -1,97 +1,53 @@
-import os
-from google import genai
+from flask import Flask, render_template, request, redirect, url_for, flash
 from dotenv import load_dotenv
-from googletrans import Translator
+import os
+from followup_scheduler import add_prescription
+from database import SessionLocal, Prescription  
 
+
+# Load environment variables
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-if not GOOGLE_API_KEY:
-    raise ValueError("GOOGLE_API_KEY not found in environment variables.")
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "defaultsecret")
 
-client = genai.Client(api_key=GOOGLE_API_KEY)
-translator = Translator() 
+@app.route('/')
+def home():
+    return render_template('home.html')
 
-def translate_to_hindi(text):
-    """Translate English text to Hindi using googletrans."""
-    try:
-        translated = translator.translate(text, src='en', dest='hi')
-        return translated.text
-    except Exception as e:
-        print(f"Translation error: {e}")
-        return text  # fallback to original English
-    
-def generate_followup_email(patient_name, disease, medicine , days):
-    try:
-        prompt = f"""
-        You are a friendly yet professional medical assistant.
-        Write a follow-up email for a patient named {patient_name}.
+@app.route('/add_patient',methods=['GET','POST'])
+def add_patient():
+    if request.method == 'POST':
+        patient_name = request.form.get('patient_name')
+        patient_email = request.form.get('patient_email')
+        phone_number = request.form.get('patient_phone')
+        disease = request.form.get('disease')
+        prescription = request.form.get('prescription')
+        days = request.form.get('days')
 
-        The patient was diagnosed with {disease} and was prescribed {medicine} for {days} days.
-
-        The email should include the body part only and cover the following points:
-        1. A warm greeting to {patient_name}.
-        2. A Question to ask if they took prescribed medicine regularly.
-        3. Ask if they are feeling better or have any side effects.
-        4. Encourage them to book a follow-up appointment if symptoms persist.
-        5. Sign off simply as the 'doctor's assistant', politely and professionally.
-
-        The tone should be:
-        - Empathetic and caring
-        - Professional and concise
-        - Easy to read
-        - Avoid medical jargon
-        - Suitable to send as an actual email message
-
-        Do not include markdown or formatting. Just plain text.
-        """
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
+        add_prescription(
+            patient_name=patient_name,
+            patient_email=patient_email,
+            disease=disease,
+            prescription_text=prescription,
+            days=days,
+            patient_phone=phone_number
         )
-        return response.text.strip()
+        
+        flash("Patient details saved successfully!", "success")
+        return redirect(url_for('home'))
+    return render_template('add_patient.html')
 
-    except Exception as e:
-        print(f"Gemini API error: {e}")
-        return "Error generating follow-up email."
-    
-def generate_followup_call_script(patient_name, disease, medicine, days):
+@app.route('/patient')
+def patient_list():
+    """Fetch all patients from the database and display them."""
+    session = SessionLocal()
     try:
-        prompt = f"""
-        You are a helpful AI medical assistant.
-        Write a short voice call script (under 50 words) for a follow-up reminder.
+        patients = session.query(Prescription).all()
+        print(f"Fetched {len(patients)} patients")  
+        return render_template('patient_list.html', patients=patients)
+    finally:
+        session.close()
 
-        Patient name: {patient_name}
-        Diagnosed with: {disease}
-        Prescribed medicine: {medicine}
-        Treatment duration: {days} days.
-
-        The message should sound natural when spoken by a human or AI voice:
-        - Use a conversational tone
-        - Be polite and empathetic
-        - Mention the patient's name
-        - Encourage them to take medicines and consult doctor if not better
-        - Do not include greetings like 'Hello, this is an AI'
-        - No markdown or extra formatting
-        """
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
-
-        english_text = response.text.strip()
-        hindi_text = translate_to_hindi(english_text)
-
-        return hindi_text
-
-    except Exception as e:
-        print(f"Gemini API error (call script): {e}")
-        return "कृपया अपनी दवा समय पर लें और अगर तबियत में सुधार न हो तो डॉक्टर से संपर्क करें।"
-
-    
-if __name__ == "__main__":
-     print(generate_followup_email("Himanshi", "fever", "paracetamol", 7))
-     hindi_call = generate_followup_call_script("Himanshi", "fever", "paracetamol", 7)
-     print("📞 Hindi Call Script:\n", hindi_call)
+if __name__ == '__main__':
+    app.run(debug=True)

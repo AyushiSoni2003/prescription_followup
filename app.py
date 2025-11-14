@@ -1,63 +1,53 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from database import db
-from models import Prescription
-from mail_utils import send_followup_email
-from twilio_utils import initiate_followup_call
-from followup_scheduler import schedule_followup
-import threading
+from dotenv import load_dotenv
+import os
+from followup_scheduler import add_prescription
+from database import SessionLocal, Prescription  
+
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = os.getenv("SECRET_KEY", "defaultsecret")
 
-# Configure database
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///prescriptions.db"
-db.init_app(app)
-
-@app.before_first_request
-def create_tables():
-    db.create_all()
-
-@app.route("/")
+@app.route('/')
 def home():
-    return render_template("index.html")
+    return render_template('home.html')
 
-@app.route("/submit", methods=["POST"])
-def submit():
-    try:
-        name = request.form["name"]
-        email = request.form["email"]
-        disease = request.form["disease"]
-        medicine = request.form["medicine"]
-        duration = int(request.form["duration"])
-        phone = request.form["phone"]
+@app.route('/add_patient',methods=['GET','POST'])
+def add_patient():
+    if request.method == 'POST':
+        patient_name = request.form.get('patient_name')
+        patient_email = request.form.get('patient_email')
+        phone_number = request.form.get('patient_phone')
+        disease = request.form.get('disease')
+        prescription = request.form.get('prescription')
+        days = request.form.get('days')
 
-        new_prescription = Prescription(
-            patient_name=name,
-            patient_email=email,
-            diagnosed_disease=disease,
-            prescribed_medicine=medicine,
-            duration_days=duration,
-            phone_number=phone
+        add_prescription(
+            patient_name=patient_name,
+            patient_email=patient_email,
+            disease=disease,
+            prescription_text=prescription,
+            days=days,
+            patient_phone=phone_number
         )
+        
+        flash("Patient details saved successfully!", "success")
+        return redirect(url_for('home'))
+    return render_template('add_patient.html')
 
-        db.session.add(new_prescription)
-        db.session.commit()
+@app.route('/patient')
+def patient_list():
+    """Fetch all patients from the database and display them."""
+    session = SessionLocal()
+    try:
+        patients = session.query(Prescription).all()
+        print(f"Fetched {len(patients)} patients")  
+        return render_template('patient_list.html', patients=patients)
+    finally:
+        session.close()
 
-        # Send email
-        send_followup_email(email, name, medicine, duration)
-
-        # Initiate call
-        initiate_followup_call(phone, name)
-
-        # Schedule follow-up after duration
-        threading.Thread(target=schedule_followup, args=(new_prescription.id, duration)).start()
-
-        flash("Prescription added and follow-up scheduled successfully!", "success")
-        return redirect(url_for("home"))
-
-    except Exception as e:
-        flash(f"Error: {str(e)}", "danger")
-        return redirect(url_for("home"))
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)

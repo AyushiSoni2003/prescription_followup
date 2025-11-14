@@ -32,15 +32,15 @@ def schedule_followup_call(patient_phone,patient_name, delay, disease, medicine,
     make_followup_call(patient_phone,patient_name,disease,medicine,days)
 
 
-def add_prescription():
+def add_prescription(patient_name, patient_email, disease, prescription_text, days, patient_phone):
     db = SessionLocal()
 
-    patient_name = input("Enter patient name: ")
-    patient_email = input("Enter patient email: ")
-    disease = input("Enter diagnosed disease: ")
-    prescription_text = input("Enter prescribed medicine(s): ")
-    days = int(input("Enter duration (in days): "))
-    patient_phone = input("Enter patient phone number (with country code): ")
+    # patient_name = input("Enter patient name: ")
+    # patient_email = input("Enter patient email: ")
+    # disease = input("Enter diagnosed disease: ")
+    # prescription_text = input("Enter prescribed medicine(s): ")
+    # days = int(input("Enter duration (in days): "))
+    # patient_phone = input("Enter patient phone number (with country code): ")
 
     new_prescription = Prescription(
         patient_name=patient_name,
