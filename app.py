@@ -40,14 +40,36 @@ def add_patient():
 
 @app.route('/patient')
 def patient_list():
-    """Fetch all patients from the database and display them."""
+    name = request.args.get("name", "").strip()
+    disease = request.args.get("disease", "").strip()
+
     session = SessionLocal()
-    try:
-        patients = session.query(Prescription).all()
-        print(f"Fetched {len(patients)} patients")  
-        return render_template('patient_list.html', patients=patients)
-    finally:
-        session.close()
+    query = session.query(Prescription)
+
+    # Apply filters independently
+    if name:
+        query = query.filter(Prescription.patient_name.ilike(f"%{name}%"))
+    if disease:
+        query = query.filter(Prescription.disease.ilike(f"%{disease}%"))
+
+    patients = query.all()
+    session.close()
+
+    return render_template(
+        "patient_list.html",
+        patients=patients,
+        name=name,
+        disease=disease
+    )
+
+
+    # session = SessionLocal()
+    # try:
+    #     patients = session.query(Prescription).all()
+    #     print(f"Fetched {len(patients)} patients")  
+    #     return render_template('patient_list.html', patients=patients)
+    # finally:
+    #     session.close()
 
 if __name__ == '__main__':
     app.run(debug=True)
